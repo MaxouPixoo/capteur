@@ -1,0 +1,135 @@
+[gd_scene format=3 uid="uid://qeu330n7jybi"]
+
+[ext_resource type="StyleBox" uid="uid://t0n8yj0takmp" path="res://style/sbf_tile.tres" id="1_votad"]
+[ext_resource type="Script" uid="uid://dw7bqcf1a7xqu" path="res://tiles/sensor_a/tile.gd" id="2_q6m2o"]
+[ext_resource type="FontFile" uid="uid://ba0l4ltb3cdxg" path="res://tiles/sensor_a/SpaceMono-Bold.ttf" id="3_ykxsf"]
+[ext_resource type="Texture2D" uid="uid://d3p2fb08tckgp" path="res://tiles/sensor_a/wifi.png" id="4_5qdyw"]
+[ext_resource type="Script" uid="uid://cckwr06504sfp" path="res://core/state_icon.gd" id="5_je6oy"]
+[ext_resource type="Texture2D" uid="uid://denhk6lqnh7u" path="res://tiles/sensor_a/heart(2).png" id="6_l0xaf"]
+[ext_resource type="FontFile" uid="uid://cobxyvviqxaog" path="res://tiles/sensor_a/SpaceMono-Regular.ttf" id="7_vlejq"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_lbf3d"]
+content_margin_bottom = 1.0
+
+[node name="TileSensorDemo" type="Panel" unique_id=304170558]
+custom_minimum_size = Vector2(336, 336)
+custom_maximum_size = Vector2(336, 336)
+offset_right = 360.0
+offset_bottom = 240.0
+mouse_filter = 2
+theme_override_styles/panel = ExtResource("1_votad")
+script = ExtResource("2_q6m2o")
+metadata/_custom_type_script = "uid://csgbx3264kcel"
+
+[node name="HBoxContainer" type="HBoxContainer" parent="." unique_id=862181495]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 11.0
+offset_right = 320.0
+offset_bottom = 59.0
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="Label" type="Label" parent="HBoxContainer" unique_id=1467322133]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 1
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("3_ykxsf")
+theme_override_font_sizes/font_size = 28
+theme_override_styles/normal = SubResource("StyleBoxEmpty_lbf3d")
+text = "SENSOR BOILER"
+vertical_alignment = 1
+visible_characters_behavior = 1
+
+[node name="ConnectedIcon" type="TextureRect" parent="HBoxContainer" unique_id=31549510]
+unique_name_in_owner = true
+modulate = Color(0.23921569, 0.6, 0.28627452, 1)
+custom_maximum_size = Vector2(28, 28)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("4_5qdyw")
+script = ExtResource("5_je6oy")
+state = false
+_color_on = Color(0.23921569, 0.6, 0.28627452, 1)
+_color_off = Color(0.14, 0.14, 0.14, 1)
+metadata/_custom_type_script = "uid://cckwr06504sfp"
+
+[node name="HeartbeatIcon" type="TextureRect" parent="HBoxContainer" unique_id=224637191]
+unique_name_in_owner = true
+custom_maximum_size = Vector2(24, 24)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("6_l0xaf")
+script = ExtResource("5_je6oy")
+state = false
+_color_on = Color(0.6, 0.23921569, 0.23921569, 1)
+_color_off = Color(0.14, 0.14, 0.14, 1)
+metadata/_custom_type_script = "uid://cckwr06504sfp"
+
+[node name="IDLabel" type="Label" parent="." unique_id=614588024]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 16.0
+offset_top = 51.0
+offset_right = 320.0
+offset_bottom = 83.0
+theme_override_fonts/font = ExtResource("7_vlejq")
+theme_override_font_sizes/font_size = 20
+text = "node_id: ∅"
+
+[node name="TemperatureLabel" type="Label" parent="." unique_id=1115479050]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 15.0
+offset_top = 119.0
+offset_right = 319.0
+offset_bottom = 151.0
+theme_override_fonts/font = ExtResource("7_vlejq")
+theme_override_font_sizes/font_size = 20
+text = "Température : -- °C"
+
+[node name="HumiditeLabel" type="Label" parent="." unique_id=1521228589]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 15.0
+offset_top = 157.0
+offset_right = 319.0
+offset_bottom = 189.0
+theme_override_fonts/font = ExtResource("7_vlejq")
+theme_override_font_sizes/font_size = 20
+text = "Humidité : -- %"
+
+[node name="CounterLabel" type="Label" parent="." unique_id=853414765]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 16.0
+offset_top = 84.0
+offset_right = 320.0
+offset_bottom = 116.0
+theme_override_fonts/font = ExtResource("7_vlejq")
+theme_override_font_sizes/font_size = 20
+text = "compteur : 0"
+
+[node name="ResetButton" type="Button" parent="." unique_id=761590249]
+layout_mode = 0
+offset_left = 313.0
+offset_top = 314.0
+offset_right = 328.0
+offset_bottom = 329.0
+
+[node name="LedRow" type="HBoxContainer" parent="." unique_id=1251889524]
+layout_mode = 0
+offset_left = 9.0
+offset_top = 305.0
+offset_right = 82.0
+offset_bottom = 328.0
+
+[node name="LedColorPicker" type="ColorPickerButton" parent="LedRow" unique_id=1508429997]
+layout_mode = 2
+
+[node name="LedLabel" type="Label" parent="LedRow" unique_id=1974074500]
+layout_mode = 2
+text = "Couleur"
