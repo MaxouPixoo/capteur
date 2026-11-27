@@ -3,11 +3,21 @@
 #include <DHT.h>
 #include <math.h>
 
-#define DHTPIN 0
-#define DHTTYPE DHT11
+static constexpr uint8_t kDhtPin = 0;
+static constexpr uint8_t kDhtType = DHT11;
+static constexpr uint8_t kRgbLedPin = 2;
+static constexpr uint16_t kHeartbeatPeriodMs = 1000;
+static constexpr uint32_t kPublishPeriodMs = 2000;
+static constexpr uint32_t kBaudRate = 115200;
+static constexpr size_t kLedPayloadSize = 3;
+static constexpr size_t kLedEnabledPayloadSize = 1;
+static constexpr size_t kLedStatusPayloadSize = 4;
+static constexpr size_t kCounterPayloadSize = 4;
+static constexpr size_t kMeasurementPayloadSize = 4;
+static constexpr uint8_t kLedEnabled = 1;
+static constexpr uint8_t kLedDisabled = 0;
 
-DHT dht(DHTPIN, DHTTYPE);
-
+DHT dht(kDhtPin, kDhtType);
 
 struct __attribute__((packed)) LedPayload {
   uint8_t red;
@@ -15,15 +25,32 @@ struct __attribute__((packed)) LedPayload {
   uint8_t blue;
 };
 
-static_assert(sizeof(LedPayload) == 3,
+static_assert(sizeof(LedPayload) == kLedPayloadSize,
               "LedPayload = 3 octets");
+
+struct __attribute__((packed)) LedStatusPayload {
+  uint8_t red;
+  uint8_t green;
+  uint8_t blue;
+  uint8_t enabled;
+};
+
+static_assert(sizeof(LedStatusPayload) == kLedStatusPayloadSize,
+              "LedStatusPayload = 4 octets");
+
+struct __attribute__((packed)) LedEnabledPayload {
+  uint8_t enabled;
+};
+
+static_assert(sizeof(LedEnabledPayload) == kLedEnabledPayloadSize,
+              "LedEnabledPayload = 1 octet");
 
 // ---- Payload humidité ----
 struct __attribute__((packed)) HumidityPayload {
   float humidity;
 };
 
-static_assert(sizeof(HumidityPayload) == 4,
+static_assert(sizeof(HumidityPayload) == kMeasurementPayloadSize,
               "HumidityPayload = 4 octets");
 
 static HumidityPayload humidity = {0.0f};
@@ -33,7 +60,7 @@ struct __attribute__((packed)) TemperaturePayload {
   float temperature;
 };
 
-static_assert(sizeof(TemperaturePayload) == 4,
+static_assert(sizeof(TemperaturePayload) == kMeasurementPayloadSize,
               "TemperaturePayload = 4 octets");
 
 static TemperaturePayload temperature = {0.0f};
@@ -42,7 +69,7 @@ static TemperaturePayload temperature = {0.0f};
 struct __attribute__((packed)) CounterPayload {
   uint32_t value;
 };
-static_assert(sizeof(CounterPayload) == 4, "CounterPayload = 4 octets");
+static_assert(sizeof(CounterPayload) == kCounterPayloadSize, "CounterPayload = 4 octets");
 
 // ---- Variables globales ----
 static CounterPayload counter = {0};
@@ -53,34 +80,53 @@ constexpr mps::Subject kSubStatusCounter = mps::makeSubject("status_" DEVICE_NAM
 constexpr mps::Subject kSubCmdResetCounter = mps::makeSubject("cmd_" DEVICE_NAME "_reset");
 constexpr mps::Subject kSubStatusTemperature = mps::makeSubject("status_" DEVICE_NAME "_temperature");
 constexpr mps::Subject kSubStatusHumidity = mps::makeSubject("status_" DEVICE_NAME "_humidite");
-constexpr mps::Subject kSubCmdLed = mps::makeSubject("cmd_" DEVICE_NAME "_led");
+constexpr mps::Subject kSubSetLedColor = mps::makeSubject("set_" DEVICE_NAME "_led_color");
+constexpr mps::Subject kSubSetLedEnabled = mps::makeSubject("set_" DEVICE_NAME "_led_enabled");
+constexpr mps::Subject kSubStatusLed = mps::makeSubject("status_" DEVICE_NAME "_led");
+
+static LedStatusPayload ledState = {0, 0, 0, kLedDisabled};
+
+// Publie le compteur, les mesures connues et l’état de la LED après l’ouverture de session.
+static void publishCurrentState() {
+  MPS.publishValue(kSubStatusCounter, counter);
+  MPS.publishValue(kSubStatusTemperature, temperature);
+  MPS.publishValue(kSubStatusHumidity, humidity);
+  MPS.publishValue(kSubStatusLed, ledState);
+}
 
 // ---- Callbacks ----
 static void onSessionOpened() {
   Serial.println("Session opened!");
-
-  MPS.publishValue(kSubStatusCounter, counter);
+  publishCurrentState();
 }
 
-static void onCmdLed(const mps::FrameView& message, void*) {
+// Applique la couleur mémorisée et confirme l’état effectif par un status_.
+static void applyLedState() {
+  const uint8_t red = ledState.enabled == kLedEnabled ? ledState.red : kLedDisabled;
+  const uint8_t green = ledState.enabled == kLedEnabled ? ledState.green : kLedDisabled;
+  const uint8_t blue = ledState.enabled == kLedEnabled ? ledState.blue : kLedDisabled;
+  rgbLedWrite(kRgbLedPin, red, green, blue);
+  MPS.publishValue(kSubStatusLed, ledState);
+}
 
-  LedPayload led;
+// Reçoit une nouvelle couleur RGB, ignore les formats incorrects et confirme son application.
+static void onSetLedColor(const mps::FrameView& message, void*) {
+  LedPayload color;
+  if (!mps::readPayloadAs(message, &color)) return;
+  ledState.red = color.red;
+  ledState.green = color.green;
+  ledState.blue = color.blue;
+  ledState.enabled = kLedEnabled;
+  applyLedState();
+}
 
-  // Vérification et lecture des 3 octets
-  if (!mps::readPayloadAs(message, &led)) {
-    Serial.println("Erreur : payload LED incorrect");
-    return;
-  }
-
-  // Application de la couleur
-  rgbLedWrite(2, led.red, led.green, led.blue);
-
-  Serial.printf(
-    "LED : R=%u G=%u B=%u\n",
-    led.red,
-    led.green,
-    led.blue
-  );
+// Reçoit l’état marche/arrêt de la LED et confirme l’état appliqué.
+static void onSetLedEnabled(const mps::FrameView& message, void*) {
+  LedEnabledPayload command;
+  if (!mps::readPayloadAs(message, &command)) return;
+  if (command.enabled != kLedEnabled && command.enabled != kLedDisabled) return;
+  ledState.enabled = command.enabled;
+  applyLedState();
 }
 
 static void onSendFailed(uint16_t sequenceNumber, uint32_t subjectId, mps::SendFailureReason, mps::AcknowledgementStatus) {
@@ -88,20 +134,17 @@ static void onSendFailed(uint16_t sequenceNumber, uint32_t subjectId, mps::SendF
 }
 
 static void onCmdResetCounter(const mps::FrameView& message, void*) {
-  if (message.payloadLength != 0) return; 
+  if (message.payloadLength != 0) return;
 
   counter.value = 0;
   MPS.publishValue(kSubStatusCounter, counter);
 
-  Serial.println("Compteur remis a zero");
 }
 
 // ---- Fonctions appelées par setup/loop ----
 void publishHeartbeat() {
   static uint32_t lastHeartbeatTimeMs = 0;
-  static const uint16_t kHbPeriod = 1000;
-
-  if (millis() - lastHeartbeatTimeMs >= kHbPeriod) {
+  if (millis() - lastHeartbeatTimeMs >= kHeartbeatPeriodMs) {
     lastHeartbeatTimeMs = millis();
 
     MPS.publishHeartbeat(kSubHb);
@@ -110,18 +153,18 @@ void publishHeartbeat() {
 
 // ---- Fonctions Arduino ----
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(kBaudRate);
   dht.begin();
-  Serial.println("DHT11 initialise !");
   MPS.setLogOutput(&Serial);
 
   MPS.on(kSubCmdResetCounter, onCmdResetCounter);
-  MPS.on(kSubCmdLed, onCmdLed);
+  MPS.on(kSubSetLedColor, onSetLedColor);
+  MPS.on(kSubSetLedEnabled, onSetLedEnabled);
 
   MPS.setRegisteredCallback(onSessionOpened);
   MPS.setSendFailedCallback(onSendFailed);
 
-  MPS.on(kSubCmdResetCounter, onCmdResetCounter);
+  rgbLedWrite(kRgbLedPin, kLedDisabled, kLedDisabled, kLedDisabled);
 
   static const uint8_t kUnsetMacAddress[6] = {0, 0, 0, 0, 0, 0};
 
@@ -145,7 +188,7 @@ void loop() {
   // Envoi du compteur toutes les 2 secondes
   static uint32_t lastCounterTimeMs = 0;
 
-  if (millis() - lastCounterTimeMs >= 2000) {
+  if (millis() - lastCounterTimeMs >= kPublishPeriodMs) {
     lastCounterTimeMs = millis();
 
     counter.value++;
@@ -156,7 +199,7 @@ void loop() {
 void publishDht11() {
   static uint32_t lastDhtTimeMs = 0;
 
-  if (millis() - lastDhtTimeMs >= 2000) {
+  if (millis() - lastDhtTimeMs >= kPublishPeriodMs) {
     lastDhtTimeMs = millis();
 
     // Lecture des deux valeurs du DHT11
@@ -164,24 +207,14 @@ void publishDht11() {
     float hum = dht.readHumidity();
 
     // Vérification de la température
-    if (isnan(temp)) {
-      Serial.println("Erreur lecture temperature DHT11 !");
-    } else {
+    if (!isnan(temp)) {
       temperature.temperature = temp;
-
-      Serial.printf("Temperature : %.1f C\n", temp);
-
       MPS.publishValue(kSubStatusTemperature, temperature);
     }
 
     // Vérification de l'humidité
-    if (isnan(hum)) {
-      Serial.println("Erreur lecture humidite DHT11 !");
-    } else {
+    if (!isnan(hum)) {
       humidity.humidity = hum;
-
-      Serial.printf("Humidite : %.1f %%\n", hum);
-
       MPS.publishValue(kSubStatusHumidity, humidity);
     }
   }
