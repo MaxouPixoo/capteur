@@ -1,0 +1,107 @@
+extends Object
+class_name MPSSerialClient
+
+# Signals
+
+signal command_rejected(subject_name: String, error_code: int)
+
+signal gateway_booted()
+
+signal gateway_identified(mac_address: String, wifi_channel: int)
+
+signal gateway_log(text: String)
+
+signal gateway_reachability_changed(is_reachable: bool)
+
+signal node_offline(node_id: int, reason_code: int)
+
+signal node_online(node_id: int, mac_address: String, device_name: String)
+
+signal port_closed()
+
+signal port_error(message: String)
+
+signal port_opened()
+
+signal send_failed(sequence_number: int, subject_id: int, reason_code: int, status_code: int)
+
+signal session_lost(reason_code: int)
+
+signal session_opened(node_id: int)
+
+
+# Constants
+
+const OK = 0
+
+const NOT_REGISTERED = 1
+
+const QUEUE_FULL = 2
+
+const PAYLOAD_TOO_BIG = 3
+
+const INVALID_NAME = 4
+
+const RESERVED_SUBJECT = 5
+
+const SYSTEM_SUBJECT_FORBIDDEN = 6
+
+const HASH_COLLISION = 7
+
+const HANDLER_TABLE_FULL = 8
+
+const NOT_FOUND = 9
+
+const INVALID_CALLBACK = 10
+
+const PORT_CLOSED = 100
+
+const ALREADY_OPEN = 101
+
+const PORT_OPEN_FAILED = 102
+
+
+# Methods
+
+func compute_subject_id(subject_name: String) -> int:
+	pass
+
+func connect_to_gateway(port_name: String, baud_rate: int, device_name: String) -> int:
+	pass
+
+func disconnect_from_gateway() -> void:
+	pass
+
+func get_last_error() -> String:
+	pass
+
+func get_observer_count(subject_name: String) -> int:
+	pass
+
+func get_statistics() -> Dictionary:
+	pass
+
+func is_gateway_reachable() -> bool:
+	pass
+
+func is_port_open() -> bool:
+	pass
+
+func is_valid_subject_name(subject_name: String) -> bool:
+	pass
+
+func list_serial_ports() -> PackedStringArray:
+	pass
+
+func publish(subject_name: String, payload: PackedByteArray, request_acknowledgement: bool) -> int:
+	pass
+
+func subscribe_to(subject_name: String, callback: Callable) -> int:
+	pass
+
+func unsubscribe_all(target: Object) -> void:
+	pass
+
+func unsubscribe_from(subject_name: String, callback: Callable) -> int:
+	pass
+
